@@ -1,0 +1,22 @@
+{
+  "name": "x402-solana-devnet",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Express API gated by x402 pay-per-request, $0.01 USDC on Solana devnet.",
+  "type": "module",
+  "scripts": {
+    "server": "node server.js",
+    "client": "node client.js",
+    "generate-wallet": "node scripts/generate-wallet.js"
+  },
+  "dependencies": {
+    "@x402/core": "2.21.0",
+    "@x402/svm": "2.21.0",
+    "@x402/express": "2.21.0",
+    "@x402/fetch": "2.21.0",
+    "@solana/kit": "5.5.1",
+    "@solana/keys": "5.5.1",
+    "express": "5.2.1",
+    "dotenv": "17.4.2"
+  }
+}
