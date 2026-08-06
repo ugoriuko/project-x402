@@ -1,0 +1,50 @@
+#!/bin/sh
+# Blocks a commit if it would introduce anything shaped like a real wallet
+# secret. Runs against the staged diff, not the whole tree, so editing
+# unrelated lines in a file that happens to contain a placeholder key
+# doesn't get flagged repeatedly.
+#
+# Installed via: git config core.hooksPath .githooks
+
+set -e
+
+fail=0
+
+# 1. Never allow a literal ".env" file to be staged, anywhere in the repo.
+#    .env.example, .env.sample etc. are fine; only the exact filename is blocked.
+staged_env_files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '(^|/)\.env$' || true)
+if [ -n "$staged_env_files" ]; then
+  echo "pre-commit: refusing to commit .env file(s):"
+  echo "$staged_env_files"
+  fail=1
+fi
+
+# 2. Scan added lines in the staged diff for private-key-shaped strings.
+#    - EVM raw private key: 0x + 64 hex chars
+#    - Solana base58 secret key: 87-88 base58 chars (typical exported secretKey length)
+#    - Solana keypair JSON array: e.g. [12,34,56,...] with 60+ comma-separated bytes
+# Allow-list the obvious placeholder values used in .env.example files so
+# those can still be committed.
+placeholder_pattern='0xYourTestnetPrivateKeyHere|0xYourWalletAddressHere|YourBase58PrivateKeyHere|YourSolanaWalletAddressHere'
+
+suspicious=$(git diff --cached -U0 -- . ':(exclude).githooks/pre-commit' \
+  | grep -E '^\+' \
+  | grep -v '^[+][+][+]' \
+  | grep -vE "$placeholder_pattern" \
+  | grep -E '0x[0-9a-fA-F]{64}|\b[1-9A-HJ-NP-Za-km-z]{87,88}\b|\[[0-9]+(,[0-9]+){59,}\]' \
+  || true)
+
+if [ -n "$suspicious" ]; then
+  echo "pre-commit: staged diff contains a string shaped like a private key."
+  echo "If this is a real wallet secret, remove it before committing."
+  echo "If it's a false positive (e.g. a hash or test fixture), add an allowlist"
+  echo "entry to .githooks/pre-commit instead of bypassing this check."
+  echo "$suspicious"
+  fail=1
+fi
+
+if [ "$fail" -eq 1 ]; then
+  exit 1
+fi
+
+exit 0
