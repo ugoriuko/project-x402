@@ -4,3 +4,9 @@ node_modules/
 *.log
 .DS_Store
 package-lock.json.bak
+.next/
+out/
+# Next.js 16 auto-generates these on dev/build; agentRules:false in
+# next.config.mjs stops it, but ignore them anyway as a second layer.
+AGENTS.md
+CLAUDE.md
